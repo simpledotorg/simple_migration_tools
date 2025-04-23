@@ -6,6 +6,8 @@ echo todo
 ##
 ## Gets the dump from the dump schema
 ## 
+rm -rf ./target
+mkdir ./target
 pg_dump -U postgres -h localhost -d simple-server_test --schema=simple_dump_data -f ./target/test_dump.sql
 
 ##

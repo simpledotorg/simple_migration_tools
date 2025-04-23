@@ -14,6 +14,11 @@ CREATE TABLE simple_dump_data.patients as
 SELECT * FROM public.patients
 where assigned_facility_id in (select id from simple_dump_data.facilities);
 
+-- In case of cross state migration of patients
+UPDATE simple_dump_data.patients
+SET registration_facility_id = assigned_facility_id 
+where registration_facility_id not in (select id from simple_dump_data.facilities);
+
 --
 -- appointments
 --
@@ -49,7 +54,7 @@ and facility_id in (select id from simple_dump_data.facilities); -- Doing both t
 -- protocol_drugs
 -- 
 CREATE TABLE simple_dump_data.protocol_drugs as 
-SELECT * FROM public.protocol_drugs
+SELECT * FROM public.protocol_drugs;
 
 
 
