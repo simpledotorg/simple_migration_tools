@@ -249,8 +249,10 @@ SELECT * FROM public.raw_to_clean_medicines;
 -- regions
 --
 CREATE TABLE simple_dump_data.regions AS
+WITH REF AS (SELECT path FROM public.regions where name ='West Bengal')
 SELECT * FROM public.regions
-WHERE path ~ 'india.ihmi.west_bengal.*' OR path = 'india.ihmi' OR path = 'india';
+WHERE path @> (SELECT path FROM REF)
+OR path <@ (SELECT path FROM REF);
 
 --
 -- schema_migrations
@@ -282,18 +284,75 @@ SELECT * FROM public.treatment_groups
 WHERE id IN (SELECT DISTINCT treatment_group_id FROM simple_dump_data.treatment_group_memberships);
 
 --
--- twilio_sms_delivery_details
---
-CREATE TABLE simple_dump_data.twilio_sms_delivery_details AS
-SELECT * FROM public.twilio_sms_delivery_details
-WHERE callee_phone_number IN (SELECT number FROM simple_dump_data.patient_phone_numbers);
-
---
 -- estimated_populations
 --
 CREATE TABLE simple_dump_data.estimated_populations AS
 SELECT * FROM public.estimated_populations
 WHERE region_id IN (SELECT id FROM simple_dump_data.regions);
+
+--
+-- deduplication_logs
+--
+CREATE TABLE simple_dump_data.deduplication_logs AS
+SELECT * FROM public.deduplication_logs
+WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.patient_phone_numbers)
+  OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.patient_phone_numbers))
+AND record_type = 'PatientPhoneNumber'
+UNION ALL
+SELECT * FROM public.deduplication_logs
+WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.patient_business_identifiers)
+  OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.patient_business_identifiers))
+AND record_type = 'PatientBusinessIdentifier'
+UNION ALL
+SELECT * FROM public.deduplication_logs
+WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.patients)
+  OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.patients))
+AND record_type = 'Patient'
+UNION ALL
+SELECT * FROM public.deduplication_logs
+WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.prescription_drugs)
+  OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.prescription_drugs))
+AND record_type = 'PrescriptionDrug'
+UNION ALL
+SELECT * FROM public.deduplication_logs
+WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.blood_sugars)
+  OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.blood_sugars))
+AND record_type = 'BloodSugar'
+UNION ALL
+SELECT * FROM public.deduplication_logs
+WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.blood_pressures)
+  OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.blood_pressures))
+AND record_type = 'BloodPressure'
+UNION ALL
+SELECT * FROM public.deduplication_logs
+WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.observations)
+  OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.observations))
+AND record_type = 'Observation'
+UNION ALL
+SELECT * FROM public.deduplication_logs
+WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.addresses)
+  OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.addresses))
+AND record_type = 'Address'
+UNION ALL
+SELECT * FROM public.deduplication_logs
+WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.teleconsultations)
+  OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.teleconsultations))
+AND record_type = 'Teleconsultation'
+UNION ALL
+SELECT * FROM public.deduplication_logs
+WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.appointments)
+  OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.appointments))
+AND record_type = 'Appointment'
+UNION ALL
+SELECT * FROM public.deduplication_logs
+WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.encounters)
+  OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.encounters))
+AND record_type = 'Encounter'
+UNION ALL
+SELECT * FROM public.deduplication_logs
+WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.medical_histories)
+  OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.medical_histories))
+AND record_type = 'MedicalHistory'; 
 
 --
 -- accesses
@@ -304,3 +363,87 @@ WHERE resource_id IN (SELECT id FROM simple_dump_data.facilities)
 OR resource_id IN (SELECT id FROM simple_dump_data.facility_groups)
 OR resource_id IN (SELECT id FROM simple_dump_data.organizations);
 
+--
+-- users
+--
+CREATE TABLE simple_dump_data.users AS
+SELECT * FROM public.users
+WHERE id IN (SELECT DISTINCT user_id FROM simple_dump_data.accesses)
+OR id IN (SELECT DISTINCT user_id FROM simple_dump_data.appointments)
+OR id IN (SELECT DISTINCT user_id FROM simple_dump_data.blood_pressures)
+OR id IN (SELECT DISTINCT user_id FROM simple_dump_data.blood_sugars)
+OR id IN (SELECT DISTINCT user_id FROM simple_dump_data.call_results)
+OR id IN (SELECT DISTINCT user_id FROM simple_dump_data.deduplication_logs)
+OR id IN (SELECT DISTINCT user_id FROM simple_dump_data.drug_stocks)
+OR id IN (SELECT DISTINCT user_id FROM simple_dump_data.facilities_teleconsultation_medical_officers)
+OR id IN (SELECT DISTINCT user_id FROM simple_dump_data.medical_histories)
+OR id IN (SELECT DISTINCT user_id FROM simple_dump_data.observations)
+OR id IN (SELECT DISTINCT user_id FROM simple_dump_data.patient_attributes)
+OR id IN (SELECT DISTINCT medical_officer_id FROM simple_dump_data.teleconsultations)
+OR id IN (SELECT DISTINCT requested_medical_officer_id FROM simple_dump_data.teleconsultations)
+OR id IN (SELECT DISTINCT requester_id FROM simple_dump_data.teleconsultations)
+OR id IN (SELECT DISTINCT user_id FROM simple_dump_data.prescription_drugs)
+UNION ALL
+SELECT * FROM users WHERE access_level = 'power_user';
+
+--
+-- user_authentications
+--
+CREATE TABLE simple_dump_data.user_authentications AS
+SELECT * FROM public.user_authentications
+WHERE user_id IN (SELECT id FROM simple_dump_data.users);
+
+--
+-- email_authentications
+--
+CREATE TABLE simple_dump_data.email_authentications AS
+SELECT * FROM public.email_authentications
+WHERE id IN (SELECT authenticatable_id FROM simple_dump_data.user_authentications 
+  WHERE authenticatable_type = 'EmailAuthentication');
+
+--
+-- reminder_templates
+--
+CREATE TABLE simple_dump_data.reminder_templates AS
+SELECT * FROM public.reminder_templates
+WHERE treatment_group_id IN (SELECT id FROM simple_dump_data.treatment_groups);
+
+--
+-- experiments
+--
+CREATE TABLE simple_dump_data.experiments AS
+SELECT * FROM public.experiments
+WHERE id IN (SELECT DISTINCT experiment_id FROM simple_dump_data.treatment_groups);
+
+--
+-- notifications
+--
+CREATE TABLE simple_dump_data.notifications AS
+SELECT * FROM public.notifications
+WHERE patient_id IN (SELECT id from simple_dump_data.patients)
+AND reminder_template_id IN (SELECT id from simple_dump_data.reminder_templates)
+AND experiment_id IN (SELECT id from simple_dump_data.experiments);
+
+--
+-- communications
+--
+CREATE TABLE simple_dump_data.communications AS
+SELECT * FROM public.communications
+WHERE (notification_id in (SELECT id FROM simple_dump_data.notifications)
+AND appointment_id IN (SELECT id FROM simple_dump_data.appointments))
+OR (appointment_id IS NULL AND notification_id IN (SELECT id FROM notifications))
+OR (notification_id IS NULL AND appointment_id IN (SELECT id FROM appointments));
+
+--
+-- twilio_sms_delivery_details
+--
+CREATE TABLE simple_dump_data.twilio_sms_delivery_details AS
+SELECT * FROM public.twilio_sms_delivery_details
+WHERE id IN (SELECT detailable_id FROM simple_dump_data.communications WHERE detailable_type = 'TwilioSmsDeliveryDetail');
+
+--
+-- bsnl_delivery_details
+--
+CREATE TABLE simple_dump_data.bsnl_delivery_details AS
+SELECT * FROM public.bsnl_delivery_details
+WHERE id IN (SELECT detailable_id FROM simple_dump_data.communications WHERE detailable_type = 'BsnlDeliveryDetail');
