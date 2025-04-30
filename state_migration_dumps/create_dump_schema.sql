@@ -249,7 +249,7 @@ SELECT * FROM public.raw_to_clean_medicines;
 -- regions
 --
 CREATE TABLE simple_dump_data.regions AS
-WITH REF AS (SELECT path FROM public.regions where name ='West Bengal')
+WITH REF AS (SELECT path FROM public.regions WHERE name ='West Bengal')
 SELECT * FROM public.regions
 WHERE path @> (SELECT path FROM REF)
 OR path <@ (SELECT path FROM REF);
@@ -298,61 +298,61 @@ SELECT * FROM public.deduplication_logs
 WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.patient_phone_numbers)
   OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.patient_phone_numbers))
 AND record_type = 'PatientPhoneNumber'
-UNION ALL
+UNION
 SELECT * FROM public.deduplication_logs
 WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.patient_business_identifiers)
   OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.patient_business_identifiers))
 AND record_type = 'PatientBusinessIdentifier'
-UNION ALL
+UNION
 SELECT * FROM public.deduplication_logs
 WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.patients)
   OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.patients))
 AND record_type = 'Patient'
-UNION ALL
+UNION
 SELECT * FROM public.deduplication_logs
 WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.prescription_drugs)
   OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.prescription_drugs))
 AND record_type = 'PrescriptionDrug'
-UNION ALL
+UNION
 SELECT * FROM public.deduplication_logs
 WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.blood_sugars)
   OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.blood_sugars))
 AND record_type = 'BloodSugar'
-UNION ALL
+UNION
 SELECT * FROM public.deduplication_logs
 WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.blood_pressures)
   OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.blood_pressures))
 AND record_type = 'BloodPressure'
-UNION ALL
+UNION
 SELECT * FROM public.deduplication_logs
 WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.observations)
   OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.observations))
 AND record_type = 'Observation'
-UNION ALL
+UNION
 SELECT * FROM public.deduplication_logs
 WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.addresses)
   OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.addresses))
 AND record_type = 'Address'
-UNION ALL
+UNION
 SELECT * FROM public.deduplication_logs
 WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.teleconsultations)
   OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.teleconsultations))
 AND record_type = 'Teleconsultation'
-UNION ALL
+UNION
 SELECT * FROM public.deduplication_logs
 WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.appointments)
   OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.appointments))
 AND record_type = 'Appointment'
-UNION ALL
+UNION
 SELECT * FROM public.deduplication_logs
 WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.encounters)
   OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.encounters))
 AND record_type = 'Encounter'
-UNION ALL
+UNION
 SELECT * FROM public.deduplication_logs
 WHERE (deleted_record_id IN (SELECT id::text FROM simple_dump_data.medical_histories)
   OR deduped_record_id IN (SELECT id::text FROM simple_dump_data.medical_histories))
-AND record_type = 'MedicalHistory'; 
+AND record_type = 'MedicalHistory';
 
 --
 -- accesses
@@ -383,7 +383,7 @@ OR id IN (SELECT DISTINCT medical_officer_id FROM simple_dump_data.teleconsultat
 OR id IN (SELECT DISTINCT requested_medical_officer_id FROM simple_dump_data.teleconsultations)
 OR id IN (SELECT DISTINCT requester_id FROM simple_dump_data.teleconsultations)
 OR id IN (SELECT DISTINCT user_id FROM simple_dump_data.prescription_drugs)
-UNION ALL
+UNION
 SELECT * FROM users WHERE access_level = 'power_user';
 
 --
@@ -398,7 +398,7 @@ WHERE user_id IN (SELECT id FROM simple_dump_data.users);
 --
 CREATE TABLE simple_dump_data.email_authentications AS
 SELECT * FROM public.email_authentications
-WHERE id IN (SELECT authenticatable_id FROM simple_dump_data.user_authentications 
+WHERE id IN (SELECT authenticatable_id FROM simple_dump_data.user_authentications
   WHERE authenticatable_type = 'EmailAuthentication');
 
 --
@@ -447,3 +447,109 @@ WHERE id IN (SELECT detailable_id FROM simple_dump_data.communications WHERE det
 CREATE TABLE simple_dump_data.bsnl_delivery_details AS
 SELECT * FROM public.bsnl_delivery_details
 WHERE id IN (SELECT detailable_id FROM simple_dump_data.communications WHERE detailable_type = 'BsnlDeliveryDetail');
+
+-- Creating sequences
+
+DO $$
+DECLARE
+  start_val bigint;
+BEGIN
+  SELECT COALESCE(MAX(id), 0) + 1 INTO start_val FROM simple_dump_data.bsnl_delivery_details;
+
+  EXECUTE format('
+    CREATE SEQUENCE simple_dump_data.bsnl_delivery_details_id_seq
+    START WITH %s
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+', start_val);
+
+  SELECT COALESCE(MAX(id), 0) + 1 INTO start_val FROM simple_dump_data.call_logs;
+
+  EXECUTE format('
+    CREATE SEQUENCE simple_dump_data.call_logs_id_seq
+    START WITH %s
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+', start_val);
+
+  SELECT COALESCE(MAX(id), 0) + 1 INTO start_val FROM simple_dump_data.facility_business_identifiers;
+
+  EXECUTE format('
+    CREATE SEQUENCE simple_dump_data.facility_business_identifiers_id_seq
+    START WITH %s
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+', start_val);
+
+  SELECT COALESCE(MAX(id), 0) + 1 INTO start_val FROM simple_dump_data.flipper_features;
+
+  EXECUTE format('
+    CREATE SEQUENCE simple_dump_data.flipper_features_id_seq
+    START WITH %s
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+', start_val);
+
+  SELECT COALESCE(MAX(id), 0) + 1 INTO start_val FROM simple_dump_data.flipper_gates;
+
+  EXECUTE format('
+    CREATE SEQUENCE simple_dump_data.flipper_gates_id_seq
+    START WITH %s
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+', start_val);
+
+  SELECT COALESCE(MAX(id), 0) + 1 INTO start_val FROM simple_dump_data.observations;
+
+  EXECUTE format('
+    CREATE SEQUENCE simple_dump_data.observations_id_seq
+    START WITH %s
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+', start_val);
+
+  SELECT COALESCE(MAX(id), 0) + 1 INTO start_val FROM simple_dump_data.passport_authentications;
+
+  EXECUTE format('
+    CREATE SEQUENCE simple_dump_data.passport_authentications_id_seq
+    START WITH %s
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+', start_val);
+
+  SELECT COALESCE(MAX(id), 0) + 1 INTO start_val FROM simple_dump_data.treatment_group_memberships;
+
+  EXECUTE format('
+    CREATE SEQUENCE simple_dump_data.treatment_group_memberships_id_seq
+    START WITH %s
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+', start_val);
+
+  SELECT COALESCE(MAX(id), 0) + 1 INTO start_val FROM simple_dump_data.twilio_sms_delivery_details;
+
+  EXECUTE format('
+    CREATE SEQUENCE simple_dump_data.twilio_sms_delivery_details_id_seq
+    START WITH %s
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+', start_val);
+END $$;
